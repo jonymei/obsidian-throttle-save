@@ -1,4 +1,5 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { xt } from './xt'
 
 // Remember to rename these classes and interfaces!
 
@@ -73,6 +74,25 @@ export default class MyPlugin extends Plugin {
 		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
 			console.log('click', evt);
 		});
+
+		this.registerEvent(this.app.vault.on('modify', (file) => {
+			console.log('[modify]', file.name);
+		}))
+
+		this.app.workspace.on('file-open', (file) => {
+			console.log('[file-open]', file)
+			const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!markdownView) {
+				console.error('!!!!', 'markdownView not exist')
+				return
+			}
+			console.log('[requestSave]', markdownView.requestSave)
+			const i = xt(markdownView.save.bind(markdownView), 10e3)
+			markdownView.requestSave = function () {
+				this.dirty = true;
+				i();	// 是否需要返回？
+			}
+		})
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
