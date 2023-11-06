@@ -1,11 +1,11 @@
 {
-	"id": "obsidian-throttle-save",
-	"name": "Throttle Save",
+	"id": "obsidian-ime-cursor",
+	"name": "IME Cursor",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Save less, sync better with iCloud.",
+	"description": "Automatically setting the cursor color based on the IME (Input Method Editor) state.",
 	"author": "maY",
-	"authorUrl": "https://github.com/jonymei/obsidian-throttle-save",
-	"fundingUrl": "https://github.com/jonymei/obsidian-throttle-save",
+	"authorUrl": "https://github.com/jonymei/obsidian-ime-cursor",
+	"fundingUrl": "https://github.com/jonymei/obsidian-ime-cursor",
 	"isDesktopOnly": false
 }

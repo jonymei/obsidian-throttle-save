@@ -1,14 +1,18 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { xt } from './xt'
+import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { exec } from 'child_process'
 
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
-	mySetting: string;
+	imSelect: string;
+	interval: number;
+	chineseIME: string;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+	imSelect: '/usr/local/bin/im-select',
+	interval: 500,
+	chineseIME: 'im.rime.inputmethod.Squirrel.Hans',
 }
 
 export default class MyPlugin extends Plugin {
@@ -16,86 +20,23 @@ export default class MyPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+		this.addSettingTab(new SampleSettingTab(this.app, this))
+		this.registerInterval(window.setInterval(() =>{
+			exec(this.settings.imSelect, (error, stdout, stderr) =>{
+				if (error) {
+					console.log(`error: ${error.message}`);
+					return;
 				}
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		this.registerEvent(this.app.vault.on('modify', (file) => {
-			console.log('[modify]', file.name);
-		}))
-
-		this.app.workspace.on('file-open', (file) => {
-			console.log('[file-open]', file)
-			const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (!markdownView) {
-				console.error('!!!!', 'markdownView not exist')
-				return
-			}
-			console.log('[requestSave]', markdownView.requestSave)
-			const i = xt(markdownView.save.bind(markdownView), 10e3)
-			markdownView.requestSave = function () {
-				this.dirty = true;
-				i();	// 是否需要返回？
-			}
-		})
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+				if (stderr) {
+					console.log(`stderr: ${stderr}`);
+					return;
+				}
+				const flag = stdout.trim() === this.settings.chineseIME
+				document.querySelectorAll('.markdown-source-view').forEach(el => {
+					el.classList.toggle('chinese', flag)
+				})
+			})
+		}, this.settings.interval || 500))
 	}
 
 	onunload() {
@@ -108,22 +49,6 @@ export default class MyPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
 	}
 }
 
@@ -143,14 +68,35 @@ class SampleSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
+			.setName('im-select path')
+			.setDesc('im-select absolute path')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+				.setPlaceholder('/usr/local/bin/im-select')
+				.setValue(this.plugin.settings.imSelect)
 				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.imSelect = value;
+					await this.plugin.saveSettings();
+				}));
+
+				new Setting(containerEl)
+				.setName('im-select update interval')
+				.setDesc('ms of running im-select command')
+				.addText(text => text
+					.setPlaceholder('500')
+					.setValue(`${this.plugin.settings.interval}`)
+					.onChange(async (value) => {
+						this.plugin.settings.interval = parseInt(value);
+						await this.plugin.saveSettings();
+					}));
+
+		new Setting(containerEl)
+			.setName('im-select source')
+			.setDesc('the source which will be highlight')
+			.addText(text => text
+				.setPlaceholder('im.rime.inputmethod.Squirrel.Hans')
+				.setValue(this.plugin.settings.chineseIME)
+				.onChange(async (value) => {
+					this.plugin.settings.chineseIME = value;
 					await this.plugin.saveSettings();
 				}));
 	}

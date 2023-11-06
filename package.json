@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-throttle-save",
+	"name": "obsidian-ime-cursor",
 	"version": "1.0.0",
-	"description": "Save less, sync better with iCloud.",
+	"description": "Automatically setting the cursor color based on the IME (Input Method Editor) state.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
