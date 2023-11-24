@@ -1,5 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { exec } from 'child_process'
+// import { exec } from 'child_process'
+import * as net from 'net'
 
 // Remember to rename these classes and interfaces!
 
@@ -21,22 +22,47 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new SampleSettingTab(this.app, this))
-		this.registerInterval(window.setInterval(() =>{
-			exec(this.settings.imSelect, (error, stdout, stderr) =>{
-				if (error) {
-					console.log(`error: ${error.message}`);
-					return;
-				}
-				if (stderr) {
-					console.log(`stderr: ${stderr}`);
-					return;
-				}
-				const flag = stdout.trim() === this.settings.chineseIME
-				document.querySelectorAll('.markdown-source-view').forEach(el => {
-					el.classList.toggle('chinese', flag)
-				})
-			})
-		}, this.settings.interval || 500))
+		// this.registerInterval(window.setInterval(() =>{
+		// 	exec(this.settings.imSelect, (error, stdout, stderr) =>{
+		// 		if (error) {
+		// 			console.log(`error: ${error.message}`);
+		// 			return;
+		// 		}
+		// 		if (stderr) {
+		// 			console.log(`stderr: ${stderr}`);
+		// 			return;
+		// 		}
+		// 		const flag = stdout.trim() === this.settings.chineseIME
+		// 		document.querySelectorAll('.markdown-source-view').forEach(el => {
+		// 			el.classList.toggle('chinese', flag)
+		// 		})
+		// 	})
+		// }, this.settings.interval || 500))
+
+		const client = net.createConnection({ port: 10010, host: 'localhost' }, () => {
+			console.log('TCP Connected!')
+		})
+
+		client.on('data', (data: Buffer) => {
+			console.log('ondata:', data.toString())
+			this.handleInputSource(data.toString())
+			
+		})
+
+		client.on('end', () => {
+			console.log('TCP End!')
+		})
+
+		client.on('error', (err: Error) => {
+			console.error('TCP Error:', err)
+		})
+	}
+
+	handleInputSource(inputSource: string) {
+		const flag = inputSource.trim() === this.settings.chineseIME
+		document.querySelectorAll('.markdown-source-view').forEach(el => {
+			el.classList.toggle('chinese', flag)
+		})
 	}
 
 	onunload() {
