@@ -39,7 +39,7 @@ export default class MyPlugin extends Plugin {
 		// 	})
 		// }, this.settings.interval || 500))
 
-		const client = net.createConnection({ port: 10010, host: 'localhost' }, () => {
+		const client = net.createConnection({ path: '/tmp/im-event.sock' }, () => {
 			console.log('TCP Connected!')
 		})
 
@@ -56,6 +56,8 @@ export default class MyPlugin extends Plugin {
 		client.on('error', (err: Error) => {
 			console.error('TCP Error:', err)
 		})
+
+		// 定时、手动重连，考虑增加一个 UI 实时展示连接状态。
 	}
 
 	handleInputSource(inputSource: string) {
